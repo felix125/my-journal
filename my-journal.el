@@ -1,14 +1,35 @@
-;;; my-journal.el --- Simple journal management -*- lexical-binding: t -*-
+;;; my-journal.el --- Simple journaling with org-mode -*- lexical-binding: t -*-
+
 ;; Copyright (C) 2025 Felix Chang
+
 ;; Author: Felix Chang <felix.profecia@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1"))
-;; Keywords: journal, notes
+;; Package-Requires: ((emacs "27.1") (org "9.3"))
+;; Keywords: convenience, calendar, journal
 ;; URL: https://github.com/felix125/my-journal
 
+;; This is free and unencumbered software released into the public domain.
+;; See https://unlicense.org
+
 ;;; Commentary:
-;; A simple journal management package based on org-mode.
+
+;; my-journal is a simple journaling package that helps you maintain a clean
+;; and organized journal using org-mode format.  It provides:
 ;;
+;; - Monthly org files for better organization
+;; - Automatic date and time entries
+;; - Calendar integration for easy navigation
+;; - Simple and intuitive interface
+;; - Customizable date and time formats
+;;
+;; Basic usage:
+;;
+;; M-x my-journal-new-entry     Create a new journal entry
+;; M-x my-journal-go-last-entry Go to the last entry
+;; M-x calendar RET             Open journal for selected date
+;;
+;; For more information, see the README.md file.
+
 ;;; Code:
 
 (defgroup my-journal nil
@@ -79,13 +100,24 @@ Return point of heading."
 
 (defun my-journal-go-to-date (date)
   "Go to or create heading for specified DATE.
-DATE should be a time value as returned by `encode-time'."
+DATE should be a time value as returned by `encode-time'.
+
+This function ensures that:
+1. The monthly journal file exists
+2. The day heading exists
+3. The cursor is positioned at the heading"
   (my-journal-ensure-file date)
   (my-journal-ensure-date-heading date))
 
 ;;;###autoload
 (defun my-journal-new-entry ()
-  "Create a new journal entry for current time."
+  "Create a new journal entry for current time.
+
+This command will:
+1. Open or create the current month's journal file
+2. Create a heading for today if it doesn't exist
+3. Add a new time-stamped entry under today's heading
+4. Position cursor ready for writing the entry"
   (interactive)
   (let ((file (my-journal-file-path)))
     (make-directory (file-name-directory file) t)
@@ -100,7 +132,13 @@ DATE should be a time value as returned by `encode-time'."
 ;;;###autoload
 (defun my-journal-go-last-entry ()
   "Open journal and move cursor to the last entry.
-If no entry exists for today, create a new one."
+If no entry exists for today, create a new one.
+
+When executed, this command will:
+1. Open the current month's journal file
+2. Navigate to the most recent entry
+3. Expand the entry's parent heading
+4. If no entry exists, create a new one"
   (interactive)
   (let ((file (my-journal-file-path)))
     (if (file-exists-p file)
@@ -118,20 +156,29 @@ If no entry exists for today, create a new one."
 
 ;;;###autoload
 (defun my-journal-go-current-day ()
-  "Go to today's heading in journal."
+  "Go to today's heading in journal.
+
+Opens the current month's journal file and moves
+cursor to today's date heading, creating it if necessary."
   (interactive)
   (my-journal-go-to-date (current-time)))
 
 ;;;###autoload
 (defun my-journal-go-previous-day ()
-  "Go to previous day's heading in journal."
+  "Go to previous day's heading in journal.
+
+Opens the appropriate journal file and moves cursor to
+the previous day's heading, creating it if necessary."
   (interactive)
   (let ((previous-date (time-subtract (current-time) (days-to-time 1))))
     (my-journal-go-to-date previous-date)))
 
 ;;;###autoload
 (defun my-journal-go-next-day ()
-  "Go to next day's heading in journal."
+  "Go to next day's heading in journal.
+
+Opens the appropriate journal file and moves cursor to
+the next day's heading, creating it if necessary."
   (interactive)
   (let ((next-date (time-add (current-time) (days-to-time 1))))
     (my-journal-go-to-date next-date)))
@@ -139,25 +186,34 @@ If no entry exists for today, create a new one."
 ;;;###autoload
 (defun my-journal-calendar-open-day ()
   "Open journal entry for date at point in calendar.
-If not in calendar, open calendar for selection."
+If not in calendar, open calendar for selection.
+
+When in calendar:
+1. Takes the date at point
+2. Opens the appropriate journal file
+3. Creates the date heading if necessary
+4. Closes the calendar window
+
+When not in calendar:
+1. Opens the calendar for date selection"
   (interactive)
   (if (eq major-mode 'calendar-mode)
       (let* ((date (calendar-cursor-to-date))
              (calendar-window (get-buffer-window "*Calendar*"))
              (scratch-window (get-buffer-window "*scratch*"))
              (main-window (get-largest-window)))
-        ;; 先選擇適當的視窗
+        ;; Automatically select the appropriate window
         (if scratch-window
             (select-window scratch-window)
           (select-window main-window))
-        ;; 打開日誌
+        ;; Open calendar window
         (my-journal-go-to-date
          (encode-time 0 0 0
                      (nth 1 date)  ; day
                      (nth 0 date)  ; month
                      (nth 2 date)  ; year
                      ))
-        ;; 關閉 calendar 視窗
+        ;; Close calendar window
         (when calendar-window
           (delete-window calendar-window)))
     (calendar)))
